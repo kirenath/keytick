@@ -88,6 +88,7 @@ export function Workbench({ endpoint, onTested }: WorkbenchProps) {
             <ProbeCard
               endpoint={endpoint}
               apiKey={apiKey}
+              models={models}
               onTested={onTested}
               defaultType={getEndpointType(endpoint)}
             />

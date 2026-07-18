@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { BoxesIcon, ServerIcon } from 'lucide-react'
+import { BoxesIcon, ServerIcon, XIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import {
@@ -12,7 +12,10 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Field, FieldLabel } from '@/components/ui/field'
 import { Spinner } from '@/components/ui/spinner'
+import { ModelPicker } from '@/components/model-picker'
 import {
   type CheckResult,
   type Endpoint,
@@ -23,6 +26,8 @@ import {
 interface ProbeCardProps {
   endpoint: Endpoint
   apiKey: string
+  /** 协议端点检测可选择的模型列表（来自「拉取模型」） */
+  models: string[]
   onTested: () => void
   /** 来自端点配置的默认协议类型；chat 不在探测列表中，但其他三个会被标记为「默认」 */
   defaultType: EndpointType
@@ -32,7 +37,9 @@ interface ProbeMeta {
   title: string
   protocol: string
   path: string
+  /** 选了模型的提示，未传时则用此提示 */
   hint: string
+  hintWithModel: string
 }
 
 const PROBE_META: Record<ProbeKind, ProbeMeta> = {
@@ -41,18 +48,21 @@ const PROBE_META: Record<ProbeKind, ProbeMeta> = {
     protocol: 'OpenAI',
     path: '/v1/responses',
     hint: 'POST 探测，使用 Authorization: Bearer',
+    hintWithModel: 'POST 探测，使用所选模型发起最小调用',
   },
   messages: {
     title: 'Messages API',
     protocol: 'Anthropic',
     path: '/v1/messages',
     hint: 'POST 探测，使用 x-api-key + anthropic-version',
+    hintWithModel: 'POST 探测，使用所选模型发起最小调用',
   },
   v1beta: {
     title: 'v1beta Models',
     protocol: 'Gemini',
     path: '/v1beta/models',
     hint: 'GET 探测，使用 x-goog-api-key',
+    hintWithModel: 'GET 探测 /v1beta/models/{model} 验证该模型存在',
   },
 }
 
@@ -66,13 +76,16 @@ function orderedProbes(defaultType: EndpointType): ProbeKind[] {
   return [alt, ...rest]
 }
 
-export function ProbeCard({ endpoint, apiKey, onTested, defaultType }: ProbeCardProps) {
+export function ProbeCard({ endpoint, apiKey, models, onTested, defaultType }: ProbeCardProps) {
   const [loadingKind, setLoadingKind] = useState<ProbeKind | null>(null)
   const [results, setResults] = useState<
     Partial<Record<ProbeKind, CheckResult>>
   >({})
+  // 所有探测共用的模型选择；空表示按协议默认路径探测
+  const [probeModel, setProbeModel] = useState('')
   const probeOrder = orderedProbes(defaultType)
   const defaultProbe = defaultType === 'chat' ? null : (defaultType as ProbeKind)
+  const activeModel = probeModel.trim()
 
   async function probe(kind: ProbeKind) {
     setLoadingKind(kind)
@@ -84,6 +97,7 @@ export function ProbeCard({ endpoint, apiKey, onTested, defaultType }: ProbeCard
           baseUrl: endpoint.baseUrl,
           apiKey,
           endpointId: endpoint.id,
+          model: activeModel || undefined,
           kind,
         }),
       })
@@ -125,6 +139,42 @@ export function ProbeCard({ endpoint, apiKey, onTested, defaultType }: ProbeCard
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
+        <Field className="max-w-md">
+          <FieldLabel htmlFor="probe-model">探测使用的模型（可选）</FieldLabel>
+          <div className="flex items-center gap-2">
+            <ModelPicker
+              id="probe-model"
+              className="flex-1"
+              value={probeModel}
+              onChange={setProbeModel}
+              models={models}
+              disabled={loadingKind !== null}
+              placeholder={
+                models.length
+                  ? '点击选择，或输入名称筛选'
+                  : '可直接输入模型名，或拉取模型后再选'
+              }
+            />
+            {activeModel && (
+              <Button
+                variant="ghost"
+                size="sm"
+                aria-label="清除模型选择"
+                onClick={() => setProbeModel('')}
+                disabled={loadingKind !== null}
+              >
+                <XIcon data-icon="inline-start" />
+                清除
+              </Button>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {activeModel
+              ? '将使用该模型发起探测。response/messages 会以该模型发起一次最小调用；v1beta 会查询该模型信息。'
+              : '未选模型时使用占位模型探测（v1beta 会拉取模型列表）。'}
+          </p>
+        </Field>
+
         <div className="grid gap-2 sm:grid-cols-3">
           {probeOrder.map((kind) => {
             const meta = PROBE_META[kind]
@@ -187,6 +237,7 @@ export function ProbeCard({ endpoint, apiKey, onTested, defaultType }: ProbeCard
           if (!r) return null
           const meta = PROBE_META[kind]
           const isDefault = defaultProbe === kind
+          const metaHint = activeModel ? meta.hintWithModel : meta.hint
           return (
             <div
               key={`detail-${kind}`}
@@ -202,7 +253,12 @@ export function ProbeCard({ endpoint, apiKey, onTested, defaultType }: ProbeCard
                   )}
                 </span>
                 <span className="text-xs text-muted-foreground">
-                  {meta.hint}
+                  {metaHint}
+                  {activeModel && (
+                    <span className="ml-2 rounded bg-muted px-1.5 py-0.5 font-mono text-[10px]">
+                      model: {activeModel}
+                    </span>
+                  )}
                 </span>
               </div>
               {r.message && (

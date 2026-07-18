@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { CheckIcon, ChevronDownIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { ScrollArea } from '@/components/ui/scroll-area'
+
 import {
   InputGroup,
   InputGroupInput,
@@ -137,35 +137,33 @@ export function ModelPicker({
         </button>
       </InputGroup>
       {showDropdown && (
-        <div className="absolute z-50 mt-1 w-full overflow-hidden rounded-md border bg-popover shadow-md">
-          <ScrollArea className="max-h-60">
-            <ul className="py-1">
-              {filtered.map((m) => (
-                <li key={m}>
-                  <button
-                    type="button"
-                    onMouseDown={(e) => {
-                      e.preventDefault()
-                      handleSelect(m)
-                    }}
-                    className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left hover:bg-accent"
-                  >
-                    <span className="min-w-0 flex-1 truncate font-mono text-xs">
-                      {m}
-                    </span>
-                    {value === m && (
-                      <CheckIcon className="size-3 shrink-0 text-primary" />
-                    )}
-                  </button>
-                </li>
-              ))}
-              {models.length > MAX_VISIBLE && query.trim() === '' && (
-                <li className="px-2.5 py-1 text-center text-[10px] text-muted-foreground">
-                  {`仅显示前 ${MAX_VISIBLE} 条，输入关键词可继续筛选`}
-                </li>
-              )}
-            </ul>
-          </ScrollArea>
+        <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover shadow-md">
+          <ul className="max-h-60 overflow-y-auto py-1">
+            {filtered.map((m) => (
+              <li key={m}>
+                <button
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault()
+                    handleSelect(m)
+                  }}
+                  className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left hover:bg-accent"
+                >
+                  <span className="min-w-0 flex-1 truncate font-mono text-xs">
+                    {m}
+                  </span>
+                  {value === m && (
+                    <CheckIcon className="size-3 shrink-0 text-primary" />
+                  )}
+                </button>
+              </li>
+            ))}
+            {models.length > MAX_VISIBLE && query.trim() === '' && (
+              <li className="px-2.5 py-1 text-center text-[10px] text-muted-foreground">
+                {`仅显示前 ${MAX_VISIBLE} 条，输入关键词可继续筛选`}
+              </li>
+            )}
+          </ul>
         </div>
       )}
       {open && models.length === 0 && (
