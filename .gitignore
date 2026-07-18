@@ -33,3 +33,6 @@ tsconfig.tsbuildinfo
 
 # Local app data
 data/endpoints.json
+
+# prd folder
+/prd/
