@@ -1,11 +1,17 @@
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
-import { Roboto, Roboto_Mono } from 'next/font/google'
+import { Noto_Sans_SC, Roboto_Mono } from 'next/font/google'
 import { Toaster } from '@/components/ui/sonner'
 import './globals.css'
 
-const _roboto = Roboto({ subsets: ['latin'], weight: ['400', '500', '700'] })
-const _robotoMono = Roboto_Mono({ subsets: ['latin'] })
+const notoSansSC = Noto_Sans_SC({
+  subsets: ['latin'],
+  variable: '--font-noto-sans-sc',
+})
+const robotoMono = Roboto_Mono({
+  subsets: ['latin'],
+  variable: '--font-roboto-mono',
+})
 
 export const metadata: Metadata = {
   title: 'API 端点检测台',
@@ -28,7 +34,10 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="zh-CN" className="light bg-background">
+    <html
+      lang="zh-CN"
+      className={`${notoSansSC.variable} ${robotoMono.variable} light bg-background`}
+    >
       <body className="font-sans antialiased">
         {children}
         <Toaster position="top-center" richColors />
