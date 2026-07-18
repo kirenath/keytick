@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { CheckTab } from '@/components/check-tab'
+import { ProbeCard } from '@/components/probe-card'
 import { ChatTab } from '@/components/chat-tab'
 import { HistoryTab } from '@/components/history-tab'
 import type { Endpoint } from '@/lib/types'
@@ -63,14 +64,17 @@ export function Workbench({ endpoint, onTested }: WorkbenchProps) {
           <TabsTrigger value="history">历史</TabsTrigger>
         </TabsList>
         <TabsContent value="check" className="min-h-0 flex-1 overflow-y-auto">
-          <CheckTab
-            endpoint={endpoint}
-            apiKey={apiKey}
-            onApiKeyChange={handleApiKeyChange}
-            models={models}
-            onModelsChange={setModels}
-            onTested={onTested}
-          />
+          <div className="flex flex-col gap-4">
+            <CheckTab
+              endpoint={endpoint}
+              apiKey={apiKey}
+              onApiKeyChange={handleApiKeyChange}
+              models={models}
+              onModelsChange={setModels}
+              onTested={onTested}
+            />
+            <ProbeCard endpoint={endpoint} apiKey={apiKey} onTested={onTested} />
+          </div>
         </TabsContent>
         <TabsContent value="chat" className="min-h-0 flex-1">
           <ChatTab endpoint={endpoint} apiKey={apiKey} models={models} />

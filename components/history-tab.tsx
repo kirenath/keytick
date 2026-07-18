@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
-import type { Endpoint } from '@/lib/types'
+import type { Endpoint, TestRecord } from '@/lib/types'
 
 function formatTime(iso: string) {
   return new Date(iso).toLocaleString('zh-CN', {
@@ -23,6 +23,21 @@ function formatTime(iso: string) {
     minute: '2-digit',
     second: '2-digit',
   })
+}
+
+function kindLabel(kind: TestRecord['kind']): string {
+  switch (kind) {
+    case 'models':
+      return '拉取模型'
+    case 'check':
+      return '测试连接'
+    case 'response':
+      return '探 Responses'
+    case 'messages':
+      return '探 Messages'
+    case 'v1beta':
+      return '探 Gemini'
+  }
 }
 
 export function HistoryTab({ endpoint }: { endpoint: Endpoint }) {
@@ -63,9 +78,7 @@ export function HistoryTab({ endpoint }: { endpoint: Endpoint }) {
                 {formatTime(rec.time)}
               </TableCell>
               <TableCell>
-                <Badge variant="outline">
-                  {rec.kind === 'models' ? '拉取模型' : '测试连接'}
-                </Badge>
+                <Badge variant="outline">{kindLabel(rec.kind)}</Badge>
               </TableCell>
               <TableCell>
                 <Badge

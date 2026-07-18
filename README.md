@@ -5,9 +5,10 @@
 ## 功能
 
 - 管理多个 API 端点
-- 检测 `{baseUrl}/v1/models` 可用性
+- 检测 `{BaseUrl}/v1/models` 可用性
 - 拉取并搜索模型 ID
-- 通过 `{baseUrl}/v1/chat/completions` 做流式对话测试
+- 通过 `{BaseUrl}/v1/chat/completions` 做流式对话测试
+- 协议端点探测：同时检测 OpenAI Responses、Anthropic Messages、Google Gemini v1beta 三种协议端点
 - 记录最近 20 条检测历史
 - API Key 只保存在当前浏览器会话的 `sessionStorage`，不会写入服务端文件
 
@@ -58,8 +59,9 @@ pnpm start
 2. 选择端点后，在「检测」页输入 API Key。
 3. 点击「测试连接」检查 `/v1/models` 是否可访问。
 4. 点击「拉取模型」获取模型列表。
-5. 到「对话」页选择或手动输入模型名，发送消息测试流式响应。
-6. 到「历史」页查看该端点最近的检测记录。
+5. 在「检测」页底部的「协议端点检测」卡片可分别探测 `/v1/responses`、`/v1/messages`、`/v1beta/models`，用以判断端点是否同时支持 OpenAI Responses、Anthropic Messages、Google Gemini 三种协议。每种协议会按原生请求方式（不同的 path、Header、body）发起最小探测。
+6. 到「对话」页选择或手动输入模型名，发送消息测试流式响应。
+7. 到「历史」页查看该端点最近的检测记录。
 
 Base URL 会自动去掉末尾的 `/` 和 `/v1`，所以 `https://api.example.com` 与 `https://api.example.com/v1` 都可以填写。
 
