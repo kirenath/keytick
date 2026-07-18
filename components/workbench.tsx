@@ -2,11 +2,17 @@
 
 import { useEffect, useState } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Badge } from '@/components/ui/badge'
 import { CheckTab } from '@/components/check-tab'
 import { ProbeCard } from '@/components/probe-card'
 import { ChatTab } from '@/components/chat-tab'
 import { HistoryTab } from '@/components/history-tab'
-import type { Endpoint } from '@/lib/types'
+import {
+  ENDPOINT_TYPE_LABEL,
+  ENDPOINT_TYPE_SHORT,
+  getEndpointType,
+  type Endpoint,
+} from '@/lib/types'
 
 interface WorkbenchProps {
   endpoint: Endpoint
@@ -45,6 +51,9 @@ export function Workbench({ endpoint, onTested }: WorkbenchProps) {
     <div className="flex h-full min-h-0 flex-col">
       <header className="flex items-baseline gap-3 border-b px-6 py-4">
         <h2 className="text-base font-medium">{endpoint.name}</h2>
+        <Badge variant="outline">
+          {ENDPOINT_TYPE_SHORT[getEndpointType(endpoint)]}
+        </Badge>
         <span className="truncate font-mono text-xs text-muted-foreground">
           {endpoint.baseUrl}
         </span>
@@ -53,6 +62,9 @@ export function Workbench({ endpoint, onTested }: WorkbenchProps) {
             {endpoint.note}
           </span>
         )}
+        <span className="sr-only">
+          {ENDPOINT_TYPE_LABEL[getEndpointType(endpoint)]}
+        </span>
       </header>
       <Tabs
         defaultValue="check"
@@ -73,7 +85,12 @@ export function Workbench({ endpoint, onTested }: WorkbenchProps) {
               onModelsChange={setModels}
               onTested={onTested}
             />
-            <ProbeCard endpoint={endpoint} apiKey={apiKey} onTested={onTested} />
+            <ProbeCard
+              endpoint={endpoint}
+              apiKey={apiKey}
+              onTested={onTested}
+              defaultType={getEndpointType(endpoint)}
+            />
           </div>
         </TabsContent>
         <TabsContent value="chat" className="min-h-0 flex-1">

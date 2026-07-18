@@ -13,12 +13,19 @@ import {
 } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Spinner } from '@/components/ui/spinner'
-import type { CheckResult, Endpoint, ProbeKind } from '@/lib/types'
+import {
+  type CheckResult,
+  type Endpoint,
+  type EndpointType,
+  type ProbeKind,
+} from '@/lib/types'
 
 interface ProbeCardProps {
   endpoint: Endpoint
   apiKey: string
   onTested: () => void
+  /** 来自端点配置的默认协议类型；chat 不在探测列表中，但其他三个会被标记为「默认」 */
+  defaultType: EndpointType
 }
 
 interface ProbeMeta {
@@ -49,13 +56,23 @@ const PROBE_META: Record<ProbeKind, ProbeMeta> = {
   },
 }
 
-const PROBE_ORDER: ProbeKind[] = ['response', 'messages', 'v1beta']
+const BASE_PROBE_ORDER: ProbeKind[] = ['response', 'messages', 'v1beta']
 
-export function ProbeCard({ endpoint, apiKey, onTested }: ProbeCardProps) {
+function orderedProbes(defaultType: EndpointType): ProbeKind[] {
+  // chat 不在探测列表中；若选了某个 alt 协议，则把它提到最前面
+  const alt = defaultType === 'chat' ? null : (defaultType as ProbeKind)
+  if (!alt) return BASE_PROBE_ORDER
+  const rest = BASE_PROBE_ORDER.filter((k) => k !== alt)
+  return [alt, ...rest]
+}
+
+export function ProbeCard({ endpoint, apiKey, onTested, defaultType }: ProbeCardProps) {
   const [loadingKind, setLoadingKind] = useState<ProbeKind | null>(null)
   const [results, setResults] = useState<
     Partial<Record<ProbeKind, CheckResult>>
   >({})
+  const probeOrder = orderedProbes(defaultType)
+  const defaultProbe = defaultType === 'chat' ? null : (defaultType as ProbeKind)
 
   async function probe(kind: ProbeKind) {
     setLoadingKind(kind)
@@ -109,11 +126,12 @@ export function ProbeCard({ endpoint, apiKey, onTested }: ProbeCardProps) {
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         <div className="grid gap-2 sm:grid-cols-3">
-          {PROBE_ORDER.map((kind) => {
+          {probeOrder.map((kind) => {
             const meta = PROBE_META[kind]
             const r = results[kind]
             const loading = loadingKind === kind
             const disabled = loadingKind !== null
+            const isDefault = defaultProbe === kind
             return (
               <button
                 key={kind}
@@ -123,10 +141,11 @@ export function ProbeCard({ endpoint, apiKey, onTested }: ProbeCardProps) {
                 className={cn(
                   'flex flex-col items-start gap-2 rounded-md border bg-card p-3 text-left transition-colors',
                   'hover:bg-muted/60 disabled:cursor-not-allowed disabled:opacity-60',
+                  isDefault && 'border-primary/40 ring-1 ring-primary/20',
                 )}
               >
                 <div className="flex w-full items-center justify-between gap-2">
-                  <span className="text-sm font-medium">
+                  <span className="flex items-center gap-1.5 text-sm font-medium">
                     {meta.protocol} {meta.title}
                   </span>
                   {loading ? (
@@ -142,9 +161,16 @@ export function ProbeCard({ endpoint, apiKey, onTested }: ProbeCardProps) {
                     <BoxesIcon className="size-3.5 text-muted-foreground" />
                   )}
                 </div>
-                <span className="font-mono text-xs text-muted-foreground">
-                  {meta.path}
-                </span>
+                <div className="flex w-full items-center justify-between gap-2">
+                  <span className="font-mono text-xs text-muted-foreground">
+                    {meta.path}
+                  </span>
+                  {isDefault && (
+                    <Badge variant="outline" className="text-[10px]">
+                      默认
+                    </Badge>
+                  )}
+                </div>
                 {r && !loading && (
                   <span className="font-mono text-xs text-muted-foreground">
                     {r.status !== undefined ? `HTTP ${r.status}` : '—'}
@@ -156,18 +182,24 @@ export function ProbeCard({ endpoint, apiKey, onTested }: ProbeCardProps) {
           })}
         </div>
 
-        {PROBE_ORDER.map((kind) => {
+        {probeOrder.map((kind) => {
           const r = results[kind]
           if (!r) return null
           const meta = PROBE_META[kind]
+          const isDefault = defaultProbe === kind
           return (
             <div
               key={`detail-${kind}`}
               className="rounded-md border bg-muted/30 p-3 text-sm"
             >
               <div className="mb-1 flex items-center justify-between gap-2">
-                <span className="font-medium">
+                <span className="flex items-center gap-2 font-medium">
                   {meta.protocol} {meta.title}
+                  {isDefault && (
+                    <Badge variant="outline" className="text-[10px]">
+                      默认
+                    </Badge>
+                  )}
                 </span>
                 <span className="text-xs text-muted-foreground">
                   {meta.hint}

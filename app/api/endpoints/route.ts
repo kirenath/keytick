@@ -6,6 +6,7 @@ import {
   deleteEndpoint,
 } from '@/lib/endpoint-store'
 import { normalizeBaseUrl } from '@/lib/normalize'
+import { isValidEndpointType, type EndpointType } from '@/lib/types'
 
 export async function GET() {
   const endpoints = await listEndpoints()
@@ -18,6 +19,13 @@ export async function POST(req: Request) {
   const baseUrl =
     typeof body?.baseUrl === 'string' ? normalizeBaseUrl(body.baseUrl) : ''
   const note = typeof body?.note === 'string' ? body.note.trim() : undefined
+  const endpointTypeRaw = body?.endpointType
+  // 不填 → 用默认（chat）；填了但不在枚举里 → 报错
+  const endpointType = endpointTypeRaw === undefined
+    ? undefined
+    : isValidEndpointType(endpointTypeRaw)
+      ? endpointTypeRaw
+      : null
 
   if (!name || !baseUrl) {
     return NextResponse.json({ error: '名称和 base URL 为必填' }, { status: 400 })
@@ -28,8 +36,14 @@ export async function POST(req: Request) {
       { status: 400 },
     )
   }
+  if (endpointType === null) {
+    return NextResponse.json(
+      { error: '不支持的端点类型' },
+      { status: 400 },
+    )
+  }
 
-  const endpoint = await createEndpoint({ name, baseUrl, note })
+  const endpoint = await createEndpoint({ name, baseUrl, endpointType, note })
   return NextResponse.json(endpoint, { status: 201 })
 }
 
@@ -40,7 +54,12 @@ export async function PUT(req: Request) {
     return NextResponse.json({ error: '缺少端点 id' }, { status: 400 })
   }
 
-  const data: { name?: string; baseUrl?: string; note?: string } = {}
+  const data: {
+    name?: string
+    baseUrl?: string
+    endpointType?: EndpointType
+    note?: string
+  } = {}
   if (typeof body.name === 'string' && body.name.trim()) {
     data.name = body.name.trim()
   }
@@ -53,6 +72,15 @@ export async function PUT(req: Request) {
       )
     }
     data.baseUrl = normalized
+  }
+  if (body.endpointType !== undefined) {
+    if (!isValidEndpointType(body.endpointType)) {
+      return NextResponse.json(
+        { error: '不支持的端点类型' },
+        { status: 400 },
+      )
+    }
+    data.endpointType = body.endpointType
   }
   if (typeof body.note === 'string') {
     data.note = body.note.trim()

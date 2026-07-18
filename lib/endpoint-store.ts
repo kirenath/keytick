@@ -1,7 +1,7 @@
 import 'server-only'
 import { promises as fs } from 'fs'
 import path from 'path'
-import type { Endpoint, TestRecord } from './types'
+import type { Endpoint, EndpointType, TestRecord } from './types'
 
 const DATA_DIR = path.join(process.cwd(), 'data')
 const DATA_FILE = path.join(DATA_DIR, 'endpoints.json')
@@ -36,6 +36,7 @@ export async function listEndpoints(): Promise<Endpoint[]> {
 export async function createEndpoint(data: {
   name: string
   baseUrl: string
+  endpointType?: EndpointType
   note?: string
 }): Promise<Endpoint> {
   const endpoints = await readAll()
@@ -43,6 +44,7 @@ export async function createEndpoint(data: {
     id: crypto.randomUUID(),
     name: data.name,
     baseUrl: data.baseUrl,
+    endpointType: data.endpointType,
     note: data.note,
     lastStatus: null,
     history: [],
@@ -54,7 +56,7 @@ export async function createEndpoint(data: {
 
 export async function updateEndpoint(
   id: string,
-  data: Partial<Pick<Endpoint, 'name' | 'baseUrl' | 'note'>>,
+  data: Partial<Pick<Endpoint, 'name' | 'baseUrl' | 'endpointType' | 'note'>>,
 ): Promise<Endpoint | null> {
   const endpoints = await readAll()
   const idx = endpoints.findIndex((e) => e.id === id)

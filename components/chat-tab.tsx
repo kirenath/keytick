@@ -6,16 +6,7 @@ import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Field, FieldLabel } from '@/components/ui/field'
-import { Input } from '@/components/ui/input'
 import { Slider } from '@/components/ui/slider'
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import {
   InputGroup,
   InputGroupAddon,
@@ -25,6 +16,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Spinner } from '@/components/ui/spinner'
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
+import { ModelPicker } from '@/components/model-picker'
 import type { Endpoint } from '@/lib/types'
 
 interface ChatMessage {
@@ -43,7 +35,6 @@ interface ChatTabProps {
 
 export function ChatTab({ endpoint, apiKey, models }: ChatTabProps) {
   const [model, setModel] = useState('')
-  const [manualModel, setManualModel] = useState('')
   const [temperature, setTemperature] = useState(0.7)
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
@@ -51,7 +42,7 @@ export function ChatTab({ endpoint, apiKey, models }: ChatTabProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const abortRef = useRef<AbortController | null>(null)
 
-  const effectiveModel = manualModel.trim() || model
+  const effectiveModel = model.trim()
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight })
@@ -191,31 +182,19 @@ export function ChatTab({ endpoint, apiKey, models }: ChatTabProps) {
     <div className="flex h-full min-h-0 flex-col gap-3">
       {/* 顶部：模型与参数 */}
       <div className="flex flex-wrap items-end gap-4 rounded-lg border bg-card p-3">
-        <Field className="w-56">
-          <FieldLabel>模型</FieldLabel>
-          <Select value={model} onValueChange={(v) => setModel(v ?? '')}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder={models.length ? '选择模型' : '请先拉取模型'} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                {models.map((m) => (
-                  <SelectItem key={m} value={m}>
-                    {m}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-        </Field>
-        <Field className="w-56">
-          <FieldLabel htmlFor="manual-model">或手动输入模型名</FieldLabel>
-          <Input
-            id="manual-model"
-            placeholder="例如 gpt-4o-mini"
-            className="font-mono"
-            value={manualModel}
-            onChange={(e) => setManualModel(e.target.value)}
+        <Field className="min-w-56 flex-1">
+          <FieldLabel htmlFor="chat-model">模型</FieldLabel>
+          <ModelPicker
+            id="chat-model"
+            value={model}
+            onChange={setModel}
+            models={models}
+            disabled={streaming}
+            placeholder={
+              models.length
+                ? '可点击下拉选择，或输入名称筛选'
+                : '请先去「检测」拉取模型，或直接输入模型名'
+            }
           />
         </Field>
         <Field className="w-48">

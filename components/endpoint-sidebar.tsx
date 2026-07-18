@@ -18,7 +18,12 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
 import { EndpointDialog } from '@/components/endpoint-dialog'
-import type { Endpoint } from '@/lib/types'
+import { Badge } from '@/components/ui/badge'
+import {
+  ENDPOINT_TYPE_SHORT,
+  getEndpointType,
+  type Endpoint,
+} from '@/lib/types'
 
 function StatusDot({ status }: { status: Endpoint['lastStatus'] }) {
   return (
@@ -137,6 +142,12 @@ export function EndpointSidebar({
                     <span className="min-w-0 flex-1 truncate text-sm font-medium">
                       {ep.name}
                     </span>
+                    <Badge
+                      variant="outline"
+                      className="shrink-0 text-[10px]"
+                    >
+                      {ENDPOINT_TYPE_SHORT[getEndpointType(ep)]}
+                    </Badge>
                     <span className="flex opacity-0 transition-opacity group-hover:opacity-100">
                       <Button
                         variant="ghost"

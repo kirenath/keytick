@@ -11,11 +11,25 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Field, FieldGroup, FieldLabel } from '@/components/ui/field'
+import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Spinner } from '@/components/ui/spinner'
-import type { Endpoint } from '@/lib/types'
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  ENDPOINT_TYPES,
+  ENDPOINT_TYPE_LABEL,
+  getEndpointType,
+  type Endpoint,
+  type EndpointType,
+} from '@/lib/types'
 
 interface EndpointDialogProps {
   open: boolean
@@ -34,6 +48,7 @@ export function EndpointDialog({
   const isEdit = Boolean(endpoint)
   const [name, setName] = useState('')
   const [baseUrl, setBaseUrl] = useState('')
+  const [endpointType, setEndpointType] = useState<EndpointType>('chat')
   const [note, setNote] = useState('')
   const [saving, setSaving] = useState(false)
 
@@ -41,6 +56,7 @@ export function EndpointDialog({
     if (open) {
       setName(endpoint?.name ?? '')
       setBaseUrl(endpoint?.baseUrl ?? '')
+      setEndpointType(getEndpointType(endpoint))
       setNote(endpoint?.note ?? '')
     }
   }, [open, endpoint])
@@ -57,8 +73,8 @@ export function EndpointDialog({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(
           isEdit
-            ? { id: endpoint!.id, name, baseUrl, note }
-            : { name, baseUrl, note },
+            ? { id: endpoint!.id, name, baseUrl, endpointType, note }
+            : { name, baseUrl, endpointType, note },
         ),
       })
       const data = await res.json()
@@ -104,6 +120,31 @@ export function EndpointDialog({
               value={baseUrl}
               onChange={(e) => setBaseUrl(e.target.value)}
             />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="ep-type">端点类型</FieldLabel>
+            <Select
+              value={endpointType}
+              onValueChange={(v) => v && setEndpointType(v as EndpointType)}
+            >
+              <SelectTrigger id="ep-type" className="w-full">
+                <SelectValue placeholder="选择协议类型（默认 Chat）" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  {ENDPOINT_TYPES.map((t) => (
+                    <SelectItem key={t} value={t}>
+                      {ENDPOINT_TYPE_LABEL[t]}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+            <FieldDescription>
+              {
+                '决定「协议端点检测」里的默认探测项；不影响其他探测，可随时手动测试任意协议。'
+              }
+            </FieldDescription>
           </Field>
           <Field>
             <FieldLabel htmlFor="ep-note">备注（可选）</FieldLabel>

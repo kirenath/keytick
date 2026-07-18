@@ -41,6 +41,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Spinner } from '@/components/ui/spinner'
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/ui/empty'
 import type { CheckResult, Endpoint } from '@/lib/types'
+import { getEndpointType } from '@/lib/types'
 
 interface CheckTabProps {
   endpoint: Endpoint
@@ -77,6 +78,7 @@ export function CheckTab({
           baseUrl: endpoint.baseUrl,
           apiKey,
           endpointId: endpoint.id,
+          endpointType: getEndpointType(endpoint),
           kind,
         }),
       })
