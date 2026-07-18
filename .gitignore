@@ -32,7 +32,7 @@ pnpm-debug.log*
 tsconfig.tsbuildinfo
 
 # Local app data
-data/endpoints.json
+data/*.json
 
 # prd folder
 /prd/

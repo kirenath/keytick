@@ -70,15 +70,15 @@ Base URL 会自动去掉末尾的 `/` 和 `/v1`，所以 `https://api.example.co
 
 ## 数据存储
 
-端点配置和检测历史保存在本地文件：
+端点配置、分组和检测历史保存在本地 JSON 文件。默认目录为项目下的 `data/`，生产部署应通过环境变量指定构建目录之外的持久化路径：
 
-```text
-data/endpoints.json
+```bash
+KEYTICK_DATA_DIR=/home/kirenath/keytick-data
 ```
 
-这个项目按个人本地工具设计，不依赖数据库。该文件可能包含你的私有端点地址和备注，默认不建议提交到仓库。
+目录中包含 `endpoints.json` 和 `groups.json`。这个项目按个人工具设计，不依赖数据库；这些文件可能包含私有端点地址和备注，不应提交到仓库。重新构建或替换 `.next` 前，请确认生产数据没有存放在 `.next/standalone/data` 中。
 
-API Key 不会写入 `data/endpoints.json`。它只保存在浏览器当前会话中，关闭会话后需要重新输入。
+API Key 不会写入服务端 JSON 文件，而是保存在浏览器本地存储中。
 
 ## 注意事项
 

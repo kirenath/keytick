@@ -3,7 +3,9 @@ import { promises as fs } from 'fs'
 import path from 'path'
 import type { Endpoint, EndpointGroup, EndpointType, TestRecord } from './types'
 
-const DATA_DIR = path.join(process.cwd(), 'data')
+const DATA_DIR = process.env.KEYTICK_DATA_DIR
+  ? path.resolve(process.env.KEYTICK_DATA_DIR)
+  : path.join(process.cwd(), 'data')
 const DATA_FILE = path.join(DATA_DIR, 'endpoints.json')
 const GROUPS_FILE = path.join(DATA_DIR, 'groups.json')
 const MAX_HISTORY = 20
