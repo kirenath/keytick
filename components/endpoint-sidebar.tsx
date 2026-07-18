@@ -11,10 +11,12 @@ import {
   FolderPlusIcon,
   ChevronRightIcon,
   ChevronDownIcon,
+  SettingsIcon,
 } from 'lucide-react'
+import Link from 'next/link'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -309,6 +311,14 @@ export function EndpointSidebar({
           <h1 className="text-sm font-medium">API 端点检测台</h1>
         </div>
         <div className="flex items-center gap-1">
+          <Link
+            href="/admin"
+            className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }))}
+            aria-label="管理后台"
+            title="前往接口/密钥管理后台"
+          >
+            <SettingsIcon className="size-4" />
+          </Link>
           <Button
             size="sm"
             variant="ghost"
