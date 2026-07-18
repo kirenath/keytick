@@ -12,20 +12,7 @@ export const metadata: Metadata = {
   description: '个人用 AI API 端点检测与调试工具：可用性探测、模型列表、流式对话测试',
   generator: 'v0.app',
   icons: {
-    icon: [
-      {
-        url: '/icon-light-32x32.png',
-        media: '(prefers-color-scheme: light)',
-      },
-      {
-        url: '/icon-dark-32x32.png',
-        media: '(prefers-color-scheme: dark)',
-      },
-      {
-        url: '/icon.svg',
-        type: 'image/svg+xml',
-      },
-    ],
+    icon: '/keytick.svg',
     apple: '/apple-icon.png',
   },
 }
