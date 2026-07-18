@@ -26,6 +26,14 @@ export async function POST(req: Request) {
     : isValidEndpointType(endpointTypeRaw)
       ? endpointTypeRaw
       : null
+  // groupId: null/undefined → 未分组；字符串 → 所属分组
+  const groupIdRaw = body?.groupId
+  const groupId =
+    groupIdRaw === undefined || groupIdRaw === null
+      ? null
+      : typeof groupIdRaw === 'string'
+        ? groupIdRaw
+        : null
 
   if (!name || !baseUrl) {
     return NextResponse.json({ error: '名称和 base URL 为必填' }, { status: 400 })
@@ -43,7 +51,7 @@ export async function POST(req: Request) {
     )
   }
 
-  const endpoint = await createEndpoint({ name, baseUrl, endpointType, note })
+  const endpoint = await createEndpoint({ name, baseUrl, endpointType, groupId, note })
   return NextResponse.json(endpoint, { status: 201 })
 }
 
@@ -58,6 +66,7 @@ export async function PUT(req: Request) {
     name?: string
     baseUrl?: string
     endpointType?: EndpointType
+    groupId?: string | null
     note?: string
   } = {}
   if (typeof body.name === 'string' && body.name.trim()) {
@@ -81,6 +90,13 @@ export async function PUT(req: Request) {
       )
     }
     data.endpointType = body.endpointType
+  }
+  // 允许显式传 null（移出分组）或字符串（设为某分组）；undefined 不动
+  if (body.groupId !== undefined) {
+    data.groupId =
+      body.groupId === null || typeof body.groupId === 'string'
+        ? body.groupId
+        : null
   }
   if (typeof body.note === 'string') {
     data.note = body.note.trim()

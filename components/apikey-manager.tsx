@@ -50,6 +50,8 @@ interface ApiKeyManagerProps {
   onOpenChange: (open: boolean) => void
   store: ApiKeyStore
   onChange: (store: ApiKeyStore) => void
+  /** Key 池共享范围提示（同分组名） */
+  scopeLabel?: string
 }
 
 /**
@@ -63,6 +65,7 @@ export function ApiKeyManager({
   onOpenChange,
   store,
   onChange,
+  scopeLabel,
 }: ApiKeyManagerProps) {
   const [label, setLabel] = useState('')
   const [value, setValue] = useState('')
@@ -150,7 +153,10 @@ export function ApiKeyManager({
         <DialogHeader>
           <DialogTitle>管理 API Key</DialogTitle>
           <DialogDescription>
-            {'一个端点可保存多个 Key；Key 仅保存在本机 localStorage，按端点隔离，不会写入服务端。'}
+            {'一个端点可保存多个 Key；Key 仅保存在本机 localStorage，不入服务端。'}
+            {scopeLabel
+              ? ` 该分组「${scopeLabel}」下所有端点共享这份 Key 池。`
+              : ''}
           </DialogDescription>
         </DialogHeader>
 

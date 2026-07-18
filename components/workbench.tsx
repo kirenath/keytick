@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { FolderIcon } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { CheckTab } from '@/components/check-tab'
@@ -15,6 +16,7 @@ import {
 } from '@/lib/types'
 import {
   getActiveValue,
+  getScopeId,
   loadStore,
   saveStore,
   type ApiKeyStore,
@@ -22,23 +24,31 @@ import {
 
 interface WorkbenchProps {
   endpoint: Endpoint
+  /** 该端点所属分组的名称（如有），用于头部展示并提示 Key 池共享范围 */
+  groupName?: string
   onTested: () => void
 }
 
 const EMPTY_STORE: ApiKeyStore = { keys: [], activeKeyId: null }
 
-export function Workbench({ endpoint, onTested }: WorkbenchProps) {
+export function Workbench({ endpoint, groupName, onTested }: WorkbenchProps) {
   const [store, setStore] = useState<ApiKeyStore>(EMPTY_STORE)
   const [models, setModels] = useState<string[]>([])
 
-  // 进入端点时加载本机保存的多 Key 列表（自动迁移旧版 sessionStorage 的单 Key）
+  // 同分组的端点共享同一份 Key 池，scope 为 group:<id>；未分组则用 endpoint:<id>
+  const scopeId = getScopeId({
+    endpointId: endpoint.id,
+    groupId: endpoint.groupId,
+  })
+
+  // 进入端点或切换分组时重新加载对应 scope 的 Key 列表
   useEffect(() => {
-    setStore(loadStore(endpoint.id))
-  }, [endpoint.id])
+    setStore(loadStore(scopeId, endpoint.id))
+  }, [scopeId, endpoint.id])
 
   function handleStoreChange(next: ApiKeyStore) {
     setStore(next)
-    saveStore(endpoint.id, next)
+    saveStore(scopeId, next)
   }
 
   const apiKey = getActiveValue(store)
@@ -50,6 +60,12 @@ export function Workbench({ endpoint, onTested }: WorkbenchProps) {
         <Badge variant="outline">
           {ENDPOINT_TYPE_SHORT[getEndpointType(endpoint)]}
         </Badge>
+        {groupName && (
+          <Badge variant="secondary" className="gap-1">
+            <FolderIcon className="size-3" />
+            {groupName}
+          </Badge>
+        )}
         <span className="truncate font-mono text-xs text-muted-foreground">
           {endpoint.baseUrl}
         </span>
@@ -78,6 +94,7 @@ export function Workbench({ endpoint, onTested }: WorkbenchProps) {
               apiKey={apiKey}
               store={store}
               onStoreChange={handleStoreChange}
+              keyScopeLabel={groupName}
               models={models}
               onModelsChange={setModels}
               onTested={onTested}

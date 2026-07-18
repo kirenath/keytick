@@ -62,6 +62,8 @@ interface CheckTabProps {
   apiKey: string
   store: ApiKeyStore
   onStoreChange: (store: ApiKeyStore) => void
+  /** 当前 Key 池共享范围提示：同分组端点会高亮「共享」字样 */
+  keyScopeLabel?: string
   models: string[]
   onModelsChange: (models: string[]) => void
   onTested: () => void
@@ -72,6 +74,7 @@ export function CheckTab({
   apiKey,
   store,
   onStoreChange,
+  keyScopeLabel,
   models,
   onModelsChange,
   onTested,
@@ -211,7 +214,10 @@ export function CheckTab({
           )}
         </div>
         <FieldDescription>
-          {'一个端点可保存多个 Key（本机 localStorage 按端点隔离），在此下拉切换激活的 Key；Key 不写入服务端。'}
+          {'一个端点可保存多个 Key（本机 localStorage 隔离），在此下拉切换激活的 Key；Key 不写入服务端。'}
+          {keyScopeLabel
+            ? ` 当前 Key 池由「${keyScopeLabel}」分组下所有端点共享。`
+            : ''}
         </FieldDescription>
       </Field>
 
@@ -220,6 +226,7 @@ export function CheckTab({
         onOpenChange={setManagerOpen}
         store={store}
         onChange={onStoreChange}
+        scopeLabel={keyScopeLabel}
       />
 
       <div className="flex items-center gap-2">

@@ -7,7 +7,7 @@ import { EndpointSidebar } from '@/components/endpoint-sidebar'
 import { Workbench } from '@/components/workbench'
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
 import { Spinner } from '@/components/ui/spinner'
-import type { Endpoint } from '@/lib/types'
+import type { Endpoint, EndpointGroup } from '@/lib/types'
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
@@ -17,6 +17,10 @@ export default function Page() {
     isLoading,
     mutate,
   } = useSWR<Endpoint[]>('/api/endpoints', fetcher)
+  const {
+    data: groups,
+    mutate: mutateGroups,
+  } = useSWR<EndpointGroup[]>('/api/groups', fetcher)
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
   const selected = endpoints?.find((e) => e.id === selectedId) ?? null
@@ -25,9 +29,11 @@ export default function Page() {
     <main className="flex h-dvh overflow-hidden">
       <EndpointSidebar
         endpoints={endpoints ?? []}
+        groups={groups ?? []}
         selectedId={selectedId}
         onSelect={setSelectedId}
         onMutate={() => mutate()}
+        onGroupsMutate={() => mutateGroups()}
       />
       <section className="min-w-0 flex-1">
         {isLoading ? (

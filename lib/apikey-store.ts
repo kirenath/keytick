@@ -2,10 +2,13 @@
  * API Key 列表的浏览器端持久化。
  *
  * 设计要点：
- * - 与服务端存储完全隔离，Key 只在本机 localStorage，按端点分开记录，永不入库。
- * - 一个端点可保存多个带 label 的 Key，便于在「开发/生产/备份」等多 Key 场景切换。
+ * - 与服务端存储完全隔离，Key 只在本机 localStorage，按 scope 分开记录，永不入库。
+ * - scope 由调用方决定：
+ *   - 未分组端点用 `endpoint:<id>`（向后兼容旧数据）
+ *   - 同一分组的多个端点共享一份 Key 池，scope 为 `group:<groupId>`
+ * - 一个 scope 可保存多个带 label 的 Key，便于在「开发/生产/备份」等多 Key 场景切换。
  * - 同时记录一个「当前激活 Key 的 id」，供检测/对话/协议探测共用。
- * - 兼容旧版（单 Key 仅存 sessionStorage 的写法）：进入端点时自动迁移一次。
+ * - 兼容旧版（单 Key 仅存 sessionStorage 的写法）：进入 scope 时自动迁移一次。
  */
 
 export interface ApiKeyEntry {
@@ -22,7 +25,17 @@ export interface ApiKeyStore {
 }
 
 const STORE_KEY = 'keytick:apikeys'
-const LEGACY_KEY_PREFIX = 'apikey:' // 旧版 sessionStorage 单 Key 的前缀
+const LEGACY_KEY_PREFIX = 'apikey:' // 旧版 sessionStorage 单 Key 的前缀（仅 endpoint 维度）
+
+/**
+ * 计算 Key 池的存储 scope id。
+ * - 有 groupId 的端点：同一组共享一份 Key 池
+ * - 无 groupId 的端点：按端点独立保存
+ */
+export function getScopeId(input: { endpointId: string; groupId?: string | null }): string {
+  const gid = input.groupId?.trim()
+  return gid ? `group:${gid}` : `endpoint:${input.endpointId}`
+}
 
 function isBrowser() {
   return typeof window !== 'undefined' && typeof localStorage !== 'undefined'
@@ -54,22 +67,24 @@ function writeAllStores(map: Record<string, ApiKeyStore>) {
 }
 
 /**
- * 读取端点的 Key 列表。
- * 同时尝试一次性迁移旧版 sessionStorage 中的单 Key。
+ * 读取某 scope 的 Key 列表。
+ * 同时尝试一次性迁移旧版 sessionStorage 中的单 Key（仅未分组端点维度有效）。
  */
-export function loadStore(endpointId: string): ApiKeyStore {
-  const store = readAllStores()[endpointId]
+export function loadStore(scopeId: string, legacyEndpointId?: string): ApiKeyStore {
+  const map = readAllStores()
+  const store = map[scopeId]
   if (store && Array.isArray(store.keys)) {
     return {
       keys: store.keys,
       activeKeyId: store.activeKeyId ?? null,
     }
   }
-  // 旧版迁移：从 sessionStorage 读取单 Key
+  // 旧版迁移：仅未分组端点走这个路径（分组端点以前没有 key 概念）
+  const legacyId = legacyEndpointId ?? scopeId.replace(/^endpoint:/, '')
   if (isBrowser()) {
     try {
       const legacy =
-        sessionStorage.getItem(LEGACY_KEY_PREFIX + endpointId) ?? ''
+        sessionStorage.getItem(LEGACY_KEY_PREFIX + legacyId) ?? ''
       if (legacy) {
         const entry: ApiKeyEntry = {
           id: crypto.randomUUID(),
@@ -81,9 +96,9 @@ export function loadStore(endpointId: string): ApiKeyStore {
           keys: [entry],
           activeKeyId: entry.id,
         }
-        saveStore(endpointId, migrated)
+        saveStore(scopeId, migrated)
         // 迁移成功后清理旧 key
-        sessionStorage.removeItem(LEGACY_KEY_PREFIX + endpointId)
+        sessionStorage.removeItem(LEGACY_KEY_PREFIX + legacyId)
         return migrated
       }
     } catch {
@@ -93,9 +108,9 @@ export function loadStore(endpointId: string): ApiKeyStore {
   return emptyStore()
 }
 
-export function saveStore(endpointId: string, store: ApiKeyStore) {
+export function saveStore(scopeId: string, store: ApiKeyStore) {
   const map = readAllStores()
-  map[endpointId] = store
+  map[scopeId] = store
   writeAllStores(map)
 }
 

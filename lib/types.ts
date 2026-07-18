@@ -57,10 +57,20 @@ export interface Endpoint {
   baseUrl: string
   /** 默认协议类型；缺省为 chat */
   endpointType?: EndpointType
+  /** 所属分组 id；null/undefined 表示未分组 */
+  groupId?: string | null
   note?: string
   lastStatus: 'ok' | 'fail' | null
   lastTestedAt?: string
   history: TestRecord[]
+}
+
+/** 端点分组：同组端点共享一份本地 API Key 池 */
+export interface EndpointGroup {
+  id: string
+  name: string
+  note?: string
+  createdAt: string
 }
 
 export interface CheckResult {
