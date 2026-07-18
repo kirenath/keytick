@@ -10,6 +10,7 @@ import {
   CopyIcon,
   CheckIcon,
   SearchIcon,
+  Settings2Icon,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
@@ -25,9 +26,16 @@ import { Field, FieldDescription, FieldLabel } from '@/components/ui/field'
 import {
   InputGroup,
   InputGroupAddon,
-  InputGroupButton,
   InputGroupInput,
 } from '@/components/ui/input-group'
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   Table,
   TableBody,
@@ -40,13 +48,20 @@ import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Spinner } from '@/components/ui/spinner'
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/ui/empty'
+import { ApiKeyManager } from '@/components/apikey-manager'
 import type { CheckResult, Endpoint } from '@/lib/types'
 import { getEndpointType } from '@/lib/types'
+import {
+  describeKey,
+  type ApiKeyEntry,
+  type ApiKeyStore,
+} from '@/lib/apikey-store'
 
 interface CheckTabProps {
   endpoint: Endpoint
   apiKey: string
-  onApiKeyChange: (key: string) => void
+  store: ApiKeyStore
+  onStoreChange: (store: ApiKeyStore) => void
   models: string[]
   onModelsChange: (models: string[]) => void
   onTested: () => void
@@ -55,17 +70,29 @@ interface CheckTabProps {
 export function CheckTab({
   endpoint,
   apiKey,
-  onApiKeyChange,
+  store,
+  onStoreChange,
   models,
   onModelsChange,
   onTested,
 }: CheckTabProps) {
   const [showKey, setShowKey] = useState(false)
+  const [managerOpen, setManagerOpen] = useState(false)
   const [checking, setChecking] = useState(false)
   const [pulling, setPulling] = useState(false)
   const [result, setResult] = useState<CheckResult | null>(null)
   const [search, setSearch] = useState('')
   const [copiedModel, setCopiedModel] = useState<string | null>(null)
+
+  const activeEntry: ApiKeyEntry | undefined = store.keys.find(
+    (k) => k.id === store.activeKeyId,
+  )
+
+  function handleSelectActive(id: string | null) {
+    // base-ui 的 Select 清空时会传 null；这里只关心切到某个具体 key
+    if (!id) return
+    onStoreChange({ ...store, activeKeyId: id })
+  }
 
   async function runCheck(kind: 'check' | 'models') {
     const setBusy = kind === 'check' ? setChecking : setPulling
@@ -121,32 +148,79 @@ export function CheckTab({
     <div className="flex flex-col gap-4">
       <Field>
         <FieldLabel htmlFor="api-key">API Key</FieldLabel>
-        <InputGroup className="max-w-xl">
-          <InputGroupAddon>
-            <KeyRoundIcon />
-          </InputGroupAddon>
-          <InputGroupInput
-            id="api-key"
-            type={showKey ? 'text' : 'password'}
-            placeholder="sk-..."
-            autoComplete="off"
-            className="font-mono"
-            value={apiKey}
-            onChange={(e) => onApiKeyChange(e.target.value)}
-          />
-          <InputGroupAddon align="inline-end">
-            <InputGroupButton
+        <div className="flex flex-wrap items-center gap-2">
+          <Select
+            value={store.activeKeyId ?? ''}
+            onValueChange={handleSelectActive}
+          >
+            <SelectTrigger id="api-key" className="max-w-[24rem] flex-1">
+              <SelectValue placeholder="选择一个已保存的 Key…">
+                {activeEntry ? (
+                  <span className="flex min-w-0 items-center gap-2">
+                    <KeyRoundIcon className="size-3.5 shrink-0 text-muted-foreground" />
+                    <span className="truncate">{describeKey(activeEntry)}</span>
+                    {showKey && (
+                      <span className="truncate font-mono text-xs text-muted-foreground">
+                        {apiKey}
+                      </span>
+                    )}
+                  </span>
+                ) : (
+                  <span className="text-muted-foreground">未选择</span>
+                )}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                {store.keys.length === 0 ? (
+                  <div className="px-2 py-3 text-center text-xs text-muted-foreground">
+                    暂无保存的 Key，点击右侧「管理」添加
+                  </div>
+                ) : (
+                  store.keys.map((entry) => (
+                    <SelectItem key={entry.id} value={entry.id}>
+                      <KeyRoundIcon className="size-3.5 text-muted-foreground" />
+                      <span className="flex min-w-0 flex-1 items-center gap-2">
+                        <span className="truncate">{entry.label}</span>
+                        <span className="truncate font-mono text-[11px] text-muted-foreground">
+                          {describeKey(entry)}
+                        </span>
+                      </span>
+                    </SelectItem>
+                  ))
+                )}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+          <Button
+            variant="outline"
+            onClick={() => setManagerOpen(true)}
+          >
+            <Settings2Icon data-icon="inline-start" />
+            管理 Key
+          </Button>
+          {activeEntry && (
+            <Button
+              variant="ghost"
+              size="icon"
               aria-label={showKey ? '隐藏 API Key' : '显示 API Key'}
               onClick={() => setShowKey((v) => !v)}
             >
               {showKey ? <EyeOffIcon /> : <EyeIcon />}
-            </InputGroupButton>
-          </InputGroupAddon>
-        </InputGroup>
+            </Button>
+          )}
+        </div>
         <FieldDescription>
-          {'Key 仅保存在当前浏览器会话（sessionStorage），按端点分开记录，不会写入服务端。'}
+          {'一个端点可保存多个 Key（本机 localStorage 按端点隔离），在此下拉切换激活的 Key；Key 不写入服务端。'}
         </FieldDescription>
       </Field>
+
+      <ApiKeyManager
+        open={managerOpen}
+        onOpenChange={setManagerOpen}
+        store={store}
+        onChange={onStoreChange}
+      />
 
       <div className="flex items-center gap-2">
         <Button onClick={() => runCheck('check')} disabled={checking || pulling}>

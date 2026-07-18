@@ -13,39 +13,35 @@ import {
   getEndpointType,
   type Endpoint,
 } from '@/lib/types'
+import {
+  getActiveValue,
+  loadStore,
+  saveStore,
+  type ApiKeyStore,
+} from '@/lib/apikey-store'
 
 interface WorkbenchProps {
   endpoint: Endpoint
   onTested: () => void
 }
 
-const keyStorageKey = (id: string) => `apikey:${id}`
+const EMPTY_STORE: ApiKeyStore = { keys: [], activeKeyId: null }
 
 export function Workbench({ endpoint, onTested }: WorkbenchProps) {
-  const [apiKey, setApiKey] = useState('')
+  const [store, setStore] = useState<ApiKeyStore>(EMPTY_STORE)
   const [models, setModels] = useState<string[]>([])
 
-  // Key 只存 sessionStorage，按端点分开记录，绝不发送到任何存储接口
+  // 进入端点时加载本机保存的多 Key 列表（自动迁移旧版 sessionStorage 的单 Key）
   useEffect(() => {
-    try {
-      setApiKey(sessionStorage.getItem(keyStorageKey(endpoint.id)) ?? '')
-    } catch {
-      setApiKey('')
-    }
+    setStore(loadStore(endpoint.id))
   }, [endpoint.id])
 
-  function handleApiKeyChange(key: string) {
-    setApiKey(key)
-    try {
-      if (key) {
-        sessionStorage.setItem(keyStorageKey(endpoint.id), key)
-      } else {
-        sessionStorage.removeItem(keyStorageKey(endpoint.id))
-      }
-    } catch {
-      // sessionStorage 不可用时静默降级
-    }
+  function handleStoreChange(next: ApiKeyStore) {
+    setStore(next)
+    saveStore(endpoint.id, next)
   }
+
+  const apiKey = getActiveValue(store)
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -80,7 +76,8 @@ export function Workbench({ endpoint, onTested }: WorkbenchProps) {
             <CheckTab
               endpoint={endpoint}
               apiKey={apiKey}
-              onApiKeyChange={handleApiKeyChange}
+              store={store}
+              onStoreChange={handleStoreChange}
               models={models}
               onModelsChange={setModels}
               onTested={onTested}
