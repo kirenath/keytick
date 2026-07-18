@@ -1,9 +1,11 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { FolderIcon } from 'lucide-react'
+import { FolderIcon, CopyIcon, LinkIcon } from 'lucide-react'
+import { toast } from 'sonner'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { CheckTab } from '@/components/check-tab'
 import { ProbeCard } from '@/components/probe-card'
 import { ChatTab } from '@/components/chat-tab'
@@ -55,7 +57,7 @@ export function Workbench({ endpoint, groupName, onTested }: WorkbenchProps) {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <header className="flex items-baseline gap-3 border-b px-6 py-4">
+      <header className="flex items-center gap-3 border-b px-6 py-4">
         <h2 className="text-base font-medium">{endpoint.name}</h2>
         <Badge variant="outline">
           {ENDPOINT_TYPE_SHORT[getEndpointType(endpoint)]}
@@ -69,6 +71,38 @@ export function Workbench({ endpoint, groupName, onTested }: WorkbenchProps) {
         <span className="truncate font-mono text-xs text-muted-foreground">
           {endpoint.baseUrl}
         </span>
+        <div className="flex shrink-0 items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            aria-label="复制 URL"
+            title="复制 URL"
+            onClick={() => {
+              navigator.clipboard
+                .writeText(endpoint.baseUrl)
+                .then(() => toast.success('已复制 URL'))
+                .catch(() => toast.error('复制失败'))
+            }}
+          >
+            <CopyIcon />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            aria-label="复制 /v1 URL"
+            title="复制追加 /v1 的 URL"
+            onClick={() => {
+              const base = endpoint.baseUrl.replace(/\/+$/, '')
+              const v1Url = base.endsWith('/v1') ? base : base + '/v1'
+              navigator.clipboard
+                .writeText(v1Url)
+                .then(() => toast.success('已复制 /v1 URL'))
+                .catch(() => toast.error('复制失败'))
+            }}
+          >
+            <LinkIcon />
+          </Button>
+        </div>
         {endpoint.note && (
           <span className="truncate text-xs text-muted-foreground">
             {endpoint.note}
