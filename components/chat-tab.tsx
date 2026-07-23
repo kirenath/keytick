@@ -1,7 +1,14 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { ListIcon, SendIcon, Trash2Icon, BotIcon, ZapIcon } from 'lucide-react'
+import {
+  ListIcon,
+  RefreshCwIcon,
+  SendIcon,
+  Trash2Icon,
+  BotIcon,
+  ZapIcon,
+} from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -108,23 +115,21 @@ export function ChatTab({
     }
   }
 
-  async function send(rawText?: string) {
-    const text = (rawText ?? input).trim()
-    if (!text || streaming) return
+  /** 用当前模型对既定消息历史发起流式回复 */
+  async function streamReply(history: ChatMessage[]) {
+    if (streaming) return
     if (!effectiveModel) {
       toast.error('请先选择或输入模型名')
       return
     }
+    if (history.length === 0 || history[history.length - 1]?.role !== 'user') {
+      return
+    }
 
-    const nextMessages: ChatMessage[] = [
-      ...messages,
-      { role: 'user', content: text },
-    ]
     setMessages([
-      ...nextMessages,
+      ...history,
       { role: 'assistant', content: '', reasoning: '' },
     ])
-    setInput('')
     setStreaming(true)
 
     const controller = new AbortController()
@@ -142,7 +147,7 @@ export function ChatTab({
           model: effectiveModel,
           ...(temperatureEnabled ? { temperature } : {}),
           // 多轮只带 content，不把 CoT 回传上游
-          messages: nextMessages.map(({ role, content }) => ({ role, content })),
+          messages: history.map(({ role, content }) => ({ role, content })),
         }),
         signal: controller.signal,
       })
@@ -236,6 +241,42 @@ export function ChatTab({
     }
   }
 
+  async function send(rawText?: string) {
+    const text = (rawText ?? input).trim()
+    if (!text || streaming) return
+    if (!effectiveModel) {
+      toast.error('请先选择或输入模型名')
+      return
+    }
+
+    const nextMessages: ChatMessage[] = [
+      ...messages,
+      { role: 'user', content: text },
+    ]
+    setInput('')
+    await streamReply(nextMessages)
+  }
+
+  /** 丢掉最后一条助手回复，用当前模型重发最后一条用户消息 */
+  async function resendLast() {
+    if (streaming) return
+
+    let lastUserIdx = -1
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === 'user') {
+        lastUserIdx = i
+        break
+      }
+    }
+    if (lastUserIdx === -1) {
+      toast.error('没有可重发的消息')
+      return
+    }
+
+    const history = messages.slice(0, lastUserIdx + 1)
+    await streamReply(history)
+  }
+
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (
       e.key === 'Enter' &&
@@ -251,6 +292,9 @@ export function ChatTab({
   function sendPreset(content: string) {
     void send(content)
   }
+
+  const canResend =
+    !busy && messages.some((m) => m.role === 'user') && Boolean(effectiveModel)
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-3">
@@ -327,16 +371,27 @@ export function ChatTab({
             disabled={busy || !temperatureEnabled}
           />
         </Field>
-        <Button
-          variant="outline"
-          size="sm"
-          className="ml-auto"
-          onClick={() => setMessages([])}
-          disabled={messages.length === 0 || busy}
-        >
-          <Trash2Icon data-icon="inline-start" />
-          清空对话
-        </Button>
+        <div className="ml-auto flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => void resendLast()}
+            disabled={!canResend}
+            title="用当前模型重发最后一条用户消息"
+          >
+            <RefreshCwIcon data-icon="inline-start" />
+            重发
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setMessages([])}
+            disabled={messages.length === 0 || busy}
+          >
+            <Trash2Icon data-icon="inline-start" />
+            清空对话
+          </Button>
+        </div>
       </div>
 
       {/* 中间：消息区 */}
