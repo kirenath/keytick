@@ -24,6 +24,7 @@ import {
   EmptyTitle,
 } from '@/components/ui/empty'
 import { ModelPicker } from '@/components/model-picker'
+import { MarkdownContent } from '@/components/markdown-content'
 import { CHAT_PRESETS } from '@/lib/chat-presets'
 import type { CheckResult, Endpoint } from '@/lib/types'
 import { getEndpointType } from '@/lib/types'
@@ -359,46 +360,51 @@ export function ChatTab({
           </Empty>
         ) : (
           <div className="flex flex-col gap-4">
-            {messages.map((msg, i) => (
-              <div
-                key={i}
-                className={cn(
-                  'flex flex-col gap-1',
-                  msg.role === 'user' ? 'items-end' : 'items-start',
-                )}
-              >
+            {messages.map((msg, i) => {
+              const isStreamingTail =
+                streaming && i === messages.length - 1 && msg.role === 'assistant'
+              const emptyStreaming = isStreamingTail && !msg.content
+              const stats =
+                msg.role === 'assistant' &&
+                (msg.firstTokenMs !== undefined || msg.totalMs !== undefined) ? (
+                  <>
+                    {msg.firstTokenMs !== undefined && (
+                      <Badge variant="secondary" className="font-mono text-xs">
+                        {`首字 ${msg.firstTokenMs} ms`}
+                      </Badge>
+                    )}
+                    {msg.totalMs !== undefined && (
+                      <Badge variant="secondary" className="font-mono text-xs">
+                        {`总耗时 ${msg.totalMs} ms`}
+                      </Badge>
+                    )}
+                  </>
+                ) : null
+
+              return (
                 <div
+                  key={i}
                   className={cn(
-                    'max-w-[80%] rounded-lg px-3 py-2 text-sm leading-relaxed whitespace-pre-wrap',
-                    msg.role === 'user'
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-muted text-foreground',
+                    'flex max-w-[80%] flex-col',
+                    msg.role === 'user' ? 'self-end' : 'self-start',
                   )}
                 >
-                  {msg.content ||
-                    (streaming && i === messages.length - 1 ? (
+                  {emptyStreaming ? (
+                    <div className="rounded-lg bg-muted px-3 py-2">
                       <Spinner className="size-4" />
-                    ) : (
-                      ''
-                    ))}
-                </div>
-                {msg.role === 'assistant' &&
-                  (msg.firstTokenMs !== undefined || msg.totalMs !== undefined) && (
-                    <div className="flex gap-1.5">
-                      {msg.firstTokenMs !== undefined && (
-                        <Badge variant="secondary" className="font-mono text-xs">
-                          {`首字 ${msg.firstTokenMs} ms`}
-                        </Badge>
-                      )}
-                      {msg.totalMs !== undefined && (
-                        <Badge variant="secondary" className="font-mono text-xs">
-                          {`总耗时 ${msg.totalMs} ms`}
-                        </Badge>
-                      )}
                     </div>
-                  )}
-              </div>
-            ))}
+                  ) : msg.content ? (
+                    <MarkdownContent
+                      content={msg.content}
+                      variant={msg.role === 'user' ? 'user' : 'assistant'}
+                      /* 流式输出中不提供切换，避免状态跳动 */
+                      toggleable={!isStreamingTail}
+                      footer={stats}
+                    />
+                  ) : null}
+                </div>
+              )
+            })}
           </div>
         )}
       </div>
