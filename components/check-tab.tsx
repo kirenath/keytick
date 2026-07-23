@@ -276,7 +276,7 @@ export function CheckTab({
               </div>
               <div className="flex flex-col gap-1">
                 <dt className="text-xs text-muted-foreground">响应延迟</dt>
-                <dd className="font-mono font-medium">{result.latencyMs} ms</dd>
+                <dd className="font-medium tabular-nums">{result.latencyMs} ms</dd>
               </div>
               <div className="flex flex-col gap-1">
                 <dt className="text-xs text-muted-foreground">模型数量</dt>

@@ -74,7 +74,7 @@ export function HistoryTab({ endpoint }: { endpoint: Endpoint }) {
         <TableBody>
           {history.map((rec) => (
             <TableRow key={rec.id}>
-              <TableCell className="font-mono text-xs text-muted-foreground">
+              <TableCell className="text-xs tabular-nums text-muted-foreground">
                 {formatTime(rec.time)}
               </TableCell>
               <TableCell>
@@ -88,7 +88,7 @@ export function HistoryTab({ endpoint }: { endpoint: Endpoint }) {
                   {rec.ok ? '通过' : '失败'}
                 </Badge>
               </TableCell>
-              <TableCell className="text-right font-mono text-xs">
+              <TableCell className="text-right text-xs tabular-nums">
                 {rec.latencyMs !== undefined ? `${rec.latencyMs} ms` : '—'}
               </TableCell>
               <TableCell className="max-w-64 truncate text-xs text-muted-foreground">

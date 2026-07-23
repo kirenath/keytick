@@ -222,7 +222,7 @@ export function ProbeCard({ endpoint, apiKey, models, onTested, defaultType }: P
                   )}
                 </div>
                 {r && !loading && (
-                  <span className="font-mono text-xs text-muted-foreground">
+                  <span className="text-xs tabular-nums text-muted-foreground">
                     {r.status !== undefined ? `HTTP ${r.status}` : '—'}
                     {r.latencyMs !== undefined ? ` · ${r.latencyMs} ms` : ''}
                   </span>

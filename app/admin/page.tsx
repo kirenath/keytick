@@ -578,8 +578,9 @@ export default function AdminPage() {
                                 分组共用 Key
                               </Badge>
                             </div>
-                            <span className="text-xs text-muted-foreground shrink-0 font-mono">
-                              共聚 {groupEndpoints.length} 个端点 · 本地已存 {store.keys.length} 密钥
+                            <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+                              共聚 {groupEndpoints.length} 个端点 · 本地已存{' '}
+                              {store.keys.length} 密钥
                             </span>
                           </div>
 

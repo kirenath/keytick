@@ -46,7 +46,8 @@ export function MarkdownContent({
         {showRaw ? (
           <pre
             className={cn(
-              'm-0 whitespace-pre-wrap wrap-break-word font-mono text-xs leading-relaxed',
+              // 原文以中英文混排为主，用 sans 避免 mono 字形缺失回退到系统宋体
+              'm-0 whitespace-pre-wrap wrap-break-word font-sans text-sm leading-relaxed',
               isUser ? 'text-primary-foreground' : 'text-foreground',
             )}
           >

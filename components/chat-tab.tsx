@@ -369,12 +369,12 @@ export function ChatTab({
                 (msg.firstTokenMs !== undefined || msg.totalMs !== undefined) ? (
                   <>
                     {msg.firstTokenMs !== undefined && (
-                      <Badge variant="secondary" className="font-mono text-xs">
+                      <Badge variant="secondary" className="text-xs tabular-nums">
                         {`首字 ${msg.firstTokenMs} ms`}
                       </Badge>
                     )}
                     {msg.totalMs !== undefined && (
-                      <Badge variant="secondary" className="font-mono text-xs">
+                      <Badge variant="secondary" className="text-xs tabular-nums">
                         {`总耗时 ${msg.totalMs} ms`}
                       </Badge>
                     )}

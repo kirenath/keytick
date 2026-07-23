@@ -37,8 +37,15 @@
   --color-foreground: var(--foreground);
   --color-background: var(--background);
   --color-success: var(--success);
-  --font-sans: var(--font-noto-sans-sc), 'Noto Sans SC', system-ui, sans-serif;
-  --font-mono: var(--font-roboto-mono), 'Roboto Mono', monospace;
+  --font-sans: var(--font-noto-sans-sc), 'Noto Sans SC', 'PingFang SC',
+    'Microsoft YaHei UI', 'Microsoft YaHei', system-ui, sans-serif;
+  /*
+   * Roboto Mono 无 CJK。泛型 monospace 在中文 Windows 上会映射到宋体/NSimSun，
+   * 所以 CJK 回退必须写在 generic monospace 之前。
+   */
+  --font-mono: var(--font-roboto-mono), 'Roboto Mono', var(--font-noto-sans-sc),
+    'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei UI', 'Microsoft YaHei',
+    ui-monospace, monospace;
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -163,6 +170,22 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+
+  /*
+   * 表单控件偶发不继承 body 字体（尤其是 placeholder）。
+   * 中文 placeholder 若落在 user-agent monospace/serif 上就会变成宋体。
+   */
+  input,
+  textarea,
+  select,
+  button {
+    font-family: inherit;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    font-family: inherit;
   }
 }
 

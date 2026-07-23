@@ -189,7 +189,8 @@ export function ModelPicker({
         <InputGroupInput
           id={id}
           placeholder={placeholder}
-          className="font-mono pr-7"
+          /* 值多为模型 ID 用 mono；placeholder 是中文，强制 sans 避免落到宋体 */
+          className="pr-7 font-mono placeholder:font-sans"
           value={query}
           onChange={(e) => handleQueryChange(e.target.value)}
           onFocus={handleFocus}
