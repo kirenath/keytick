@@ -44,7 +44,9 @@ export function ChatTab({
   onTested,
 }: ChatTabProps) {
   const [model, setModel] = useState('')
-  const [temperature, setTemperature] = useState(0.7)
+  /** 未启用时请求不带 temperature，交给上游默认；启用后初始值为 1 */
+  const [temperatureEnabled, setTemperatureEnabled] = useState(false)
+  const [temperature, setTemperature] = useState(1)
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
   const [streaming, setStreaming] = useState(false)
@@ -122,7 +124,7 @@ export function ChatTab({
           baseUrl: endpoint.baseUrl,
           apiKey,
           model: effectiveModel,
-          temperature,
+          ...(temperatureEnabled ? { temperature } : {}),
           messages: nextMessages.map(({ role, content }) => ({ role, content })),
         }),
         signal: controller.signal,
@@ -256,18 +258,42 @@ export function ChatTab({
             </Button>
           </div>
         </Field>
-        <Field className="w-48">
-          <FieldLabel htmlFor="temperature">
-            {`temperature：${temperature.toFixed(1)}`}
-          </FieldLabel>
+        <Field className="w-52">
+          <div className="flex items-center justify-between gap-2">
+            <FieldLabel htmlFor="temperature">
+              {temperatureEnabled
+                ? `temperature：${temperature.toFixed(1)}`
+                : 'temperature：默认'}
+            </FieldLabel>
+            <Button
+              type="button"
+              variant="ghost"
+              size="xs"
+              className="h-6 px-1.5 text-xs text-muted-foreground"
+              disabled={busy}
+              onClick={() => {
+                if (temperatureEnabled) {
+                  setTemperatureEnabled(false)
+                } else {
+                  setTemperature(1)
+                  setTemperatureEnabled(true)
+                }
+              }}
+            >
+              {temperatureEnabled ? '改回默认' : '自定义'}
+            </Button>
+          </div>
           <Slider
             id="temperature"
             min={0}
             max={2}
             step={0.1}
             value={temperature}
-            onValueChange={(v) => setTemperature(v as number)}
-            disabled={busy}
+            onValueChange={(v) => {
+              setTemperature(v as number)
+              if (!temperatureEnabled) setTemperatureEnabled(true)
+            }}
+            disabled={busy || !temperatureEnabled}
           />
         </Field>
         <Button
