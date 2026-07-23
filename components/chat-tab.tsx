@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { ListIcon, SendIcon, Trash2Icon, BotIcon } from 'lucide-react'
+import { ListIcon, SendIcon, Trash2Icon, BotIcon, ZapIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -15,8 +15,16 @@ import {
 } from '@/components/ui/input-group'
 import { Badge } from '@/components/ui/badge'
 import { Spinner } from '@/components/ui/spinner'
-import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from '@/components/ui/empty'
 import { ModelPicker } from '@/components/model-picker'
+import { CHAT_PRESETS } from '@/lib/chat-presets'
 import type { CheckResult, Endpoint } from '@/lib/types'
 import { getEndpointType } from '@/lib/types'
 
@@ -95,8 +103,8 @@ export function ChatTab({
     }
   }
 
-  async function send() {
-    const text = input.trim()
+  async function send(rawText?: string) {
+    const text = (rawText ?? input).trim()
     if (!text || streaming) return
     if (!effectiveModel) {
       toast.error('请先选择或输入模型名')
@@ -217,8 +225,12 @@ export function ChatTab({
       e.keyCode !== 229
     ) {
       e.preventDefault()
-      send()
+      void send()
     }
+  }
+
+  function sendPreset(content: string) {
+    void send(content)
   }
 
   return (
@@ -321,9 +333,29 @@ export function ChatTab({
               </EmptyMedia>
               <EmptyTitle>流式对话测试</EmptyTitle>
               <EmptyDescription>
-                选择模型后发送消息，将显示首字延迟与总耗时。对话不会被保存。
+                选择模型后发送消息，将显示首字延迟与总耗时。也可点下方快捷预设立刻发送。对话不会被保存。
               </EmptyDescription>
             </EmptyHeader>
+            {CHAT_PRESETS.length > 0 && (
+              <EmptyContent className="max-w-xl">
+                <div className="flex flex-wrap justify-center gap-2">
+                  {CHAT_PRESETS.map((preset) => (
+                    <Button
+                      key={preset.id}
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={busy}
+                      title={preset.content}
+                      onClick={() => sendPreset(preset.content)}
+                    >
+                      <ZapIcon data-icon="inline-start" />
+                      {preset.label}
+                    </Button>
+                  ))}
+                </div>
+              </EmptyContent>
+            )}
           </Empty>
         ) : (
           <div className="flex flex-col gap-4">
@@ -371,7 +403,25 @@ export function ChatTab({
         )}
       </div>
 
-      {/* 底部：输入区 */}
+      {/* 底部：快捷预设 + 输入区 */}
+      {CHAT_PRESETS.length > 0 && messages.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="mr-0.5 text-xs text-muted-foreground">快捷：</span>
+          {CHAT_PRESETS.map((preset) => (
+            <Button
+              key={preset.id}
+              type="button"
+              variant="outline"
+              size="xs"
+              disabled={busy}
+              title={preset.content}
+              onClick={() => sendPreset(preset.content)}
+            >
+              {preset.label}
+            </Button>
+          ))}
+        </div>
+      )}
       <InputGroup>
         <InputGroupTextarea
           placeholder="输入消息，Enter 发送，Shift+Enter 换行"
@@ -385,7 +435,7 @@ export function ChatTab({
           <InputGroupButton
             aria-label="发送"
             variant="default"
-            onClick={send}
+            onClick={() => void send()}
             disabled={busy || !input.trim()}
           >
             {streaming ? <Spinner /> : <SendIcon />}
