@@ -143,7 +143,13 @@ export function Workbench({ endpoint, groupName, onTested }: WorkbenchProps) {
           </div>
         </TabsContent>
         <TabsContent value="chat" className="min-h-0 flex-1">
-          <ChatTab endpoint={endpoint} apiKey={apiKey} models={models} />
+          <ChatTab
+            endpoint={endpoint}
+            apiKey={apiKey}
+            models={models}
+            onModelsChange={setModels}
+            onTested={onTested}
+          />
         </TabsContent>
         <TabsContent value="history" className="min-h-0 flex-1 overflow-y-auto">
           <HistoryTab endpoint={endpoint} />

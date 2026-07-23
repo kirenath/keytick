@@ -179,7 +179,7 @@ export function ModelPicker({
       style={dropdownStyle}
       className="z-50 rounded-md border bg-popover p-2 text-xs text-muted-foreground shadow-md"
     >
-      {'暂无模型列表，可直接输入模型名或先去「检测」页拉取模型'}
+      {'暂无模型列表，可直接输入模型名或点击「拉取模型」'}
     </div>
   ) : null
 

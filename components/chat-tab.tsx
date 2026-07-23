@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { SendIcon, Trash2Icon, BotIcon } from 'lucide-react'
+import { ListIcon, SendIcon, Trash2Icon, BotIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -17,7 +17,8 @@ import { Badge } from '@/components/ui/badge'
 import { Spinner } from '@/components/ui/spinner'
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
 import { ModelPicker } from '@/components/model-picker'
-import type { Endpoint } from '@/lib/types'
+import type { CheckResult, Endpoint } from '@/lib/types'
+import { getEndpointType } from '@/lib/types'
 
 interface ChatMessage {
   role: 'user' | 'assistant'
@@ -31,18 +32,28 @@ interface ChatTabProps {
   endpoint: Endpoint
   apiKey: string
   models: string[]
+  onModelsChange: (models: string[]) => void
+  onTested?: () => void
 }
 
-export function ChatTab({ endpoint, apiKey, models }: ChatTabProps) {
+export function ChatTab({
+  endpoint,
+  apiKey,
+  models,
+  onModelsChange,
+  onTested,
+}: ChatTabProps) {
   const [model, setModel] = useState('')
   const [temperature, setTemperature] = useState(0.7)
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
   const [streaming, setStreaming] = useState(false)
+  const [pulling, setPulling] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const abortRef = useRef<AbortController | null>(null)
 
   const effectiveModel = model.trim()
+  const busy = streaming || pulling
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight })
@@ -51,6 +62,36 @@ export function ChatTab({ endpoint, apiKey, models }: ChatTabProps) {
   useEffect(() => {
     return () => abortRef.current?.abort()
   }, [])
+
+  async function pullModels() {
+    if (pulling || streaming) return
+    setPulling(true)
+    try {
+      const res = await fetch('/api/check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          baseUrl: endpoint.baseUrl,
+          apiKey,
+          endpointId: endpoint.id,
+          endpointType: getEndpointType(endpoint),
+          kind: 'models',
+        }),
+      })
+      const data: CheckResult = await res.json()
+      if (data.ok) {
+        onModelsChange(data.models ?? [])
+        toast.success(`已拉取 ${data.models?.length ?? 0} 个模型`)
+      } else {
+        toast.error(data.message ?? '拉取模型失败')
+      }
+      onTested?.()
+    } catch {
+      toast.error('请求失败：网络错误')
+    } finally {
+      setPulling(false)
+    }
+  }
 
   async function send() {
     const text = input.trim()
@@ -184,18 +225,36 @@ export function ChatTab({ endpoint, apiKey, models }: ChatTabProps) {
       <div className="flex flex-wrap items-end gap-4 rounded-lg border bg-card p-3">
         <Field className="min-w-56 flex-1">
           <FieldLabel htmlFor="chat-model">模型</FieldLabel>
-          <ModelPicker
-            id="chat-model"
-            value={model}
-            onChange={setModel}
-            models={models}
-            disabled={streaming}
-            placeholder={
-              models.length
-                ? '可点击下拉选择，或输入名称筛选'
-                : '请先去「检测」拉取模型，或直接输入模型名'
-            }
-          />
+          <div className="flex items-center gap-2">
+            <ModelPicker
+              id="chat-model"
+              className="min-w-0 flex-1"
+              value={model}
+              onChange={setModel}
+              models={models}
+              disabled={busy}
+              placeholder={
+                models.length
+                  ? '可点击下拉选择，或输入名称筛选'
+                  : '点击右侧拉取模型，或直接输入模型名'
+              }
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              className="shrink-0"
+              onClick={pullModels}
+              disabled={busy}
+              title="从当前端点拉取模型列表"
+            >
+              {pulling ? (
+                <Spinner data-icon="inline-start" />
+              ) : (
+                <ListIcon data-icon="inline-start" />
+              )}
+              拉取模型
+            </Button>
+          </div>
         </Field>
         <Field className="w-48">
           <FieldLabel htmlFor="temperature">
@@ -208,6 +267,7 @@ export function ChatTab({ endpoint, apiKey, models }: ChatTabProps) {
             step={0.1}
             value={temperature}
             onValueChange={(v) => setTemperature(v as number)}
+            disabled={busy}
           />
         </Field>
         <Button
@@ -215,7 +275,7 @@ export function ChatTab({ endpoint, apiKey, models }: ChatTabProps) {
           size="sm"
           className="ml-auto"
           onClick={() => setMessages([])}
-          disabled={messages.length === 0 || streaming}
+          disabled={messages.length === 0 || busy}
         >
           <Trash2Icon data-icon="inline-start" />
           清空对话
@@ -293,14 +353,14 @@ export function ChatTab({ endpoint, apiKey, models }: ChatTabProps) {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          disabled={streaming}
+          disabled={busy}
         />
         <InputGroupAddon align="inline-end">
           <InputGroupButton
             aria-label="发送"
             variant="default"
             onClick={send}
-            disabled={streaming || !input.trim()}
+            disabled={busy || !input.trim()}
           >
             {streaming ? <Spinner /> : <SendIcon />}
           </InputGroupButton>
