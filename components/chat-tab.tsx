@@ -25,13 +25,17 @@ import {
 } from '@/components/ui/empty'
 import { ModelPicker } from '@/components/model-picker'
 import { MarkdownContent } from '@/components/markdown-content'
+import { ReasoningBlock } from '@/components/reasoning-block'
 import { CHAT_PRESETS } from '@/lib/chat-presets'
+import { extractStreamDelta } from '@/lib/stream-delta'
 import type { CheckResult, Endpoint } from '@/lib/types'
 import { getEndpointType } from '@/lib/types'
 
 interface ChatMessage {
   role: 'user' | 'assistant'
   content: string
+  /** 思维链 / CoT（reasoning_content 等字段） */
+  reasoning?: string
   /** 助手消息的耗时统计 */
   firstTokenMs?: number
   totalMs?: number
@@ -116,7 +120,10 @@ export function ChatTab({
       ...messages,
       { role: 'user', content: text },
     ]
-    setMessages([...nextMessages, { role: 'assistant', content: '' }])
+    setMessages([
+      ...nextMessages,
+      { role: 'assistant', content: '', reasoning: '' },
+    ])
     setInput('')
     setStreaming(true)
 
@@ -134,6 +141,7 @@ export function ChatTab({
           apiKey,
           model: effectiveModel,
           ...(temperatureEnabled ? { temperature } : {}),
+          // 多轮只带 content，不把 CoT 回传上游
           messages: nextMessages.map(({ role, content }) => ({ role, content })),
         }),
         signal: controller.signal,
@@ -148,6 +156,7 @@ export function ChatTab({
       const decoder = new TextDecoder()
       let buffer = ''
       let content = ''
+      let reasoning = ''
 
       while (true) {
         const { done, value } = await reader.read()
@@ -164,22 +173,25 @@ export function ChatTab({
           if (payload === '[DONE]') continue
           try {
             const json = JSON.parse(payload)
-            const delta: string = json?.choices?.[0]?.delta?.content ?? ''
-            if (delta) {
-              if (firstTokenMs === undefined) {
-                firstTokenMs = Math.round(performance.now() - start)
-              }
-              content += delta
-              setMessages((prev) => {
-                const copy = [...prev]
-                copy[copy.length - 1] = {
-                  role: 'assistant',
-                  content,
-                  firstTokenMs,
-                }
-                return copy
-              })
+            const parts = extractStreamDelta(json)
+            if (!parts.content && !parts.reasoning) continue
+
+            if (firstTokenMs === undefined) {
+              firstTokenMs = Math.round(performance.now() - start)
             }
+            if (parts.content) content += parts.content
+            if (parts.reasoning) reasoning += parts.reasoning
+
+            setMessages((prev) => {
+              const copy = [...prev]
+              copy[copy.length - 1] = {
+                role: 'assistant',
+                content,
+                reasoning,
+                firstTokenMs,
+              }
+              return copy
+            })
           } catch {
             // 忽略无法解析的行
           }
@@ -190,7 +202,13 @@ export function ChatTab({
       setMessages((prev) => {
         const copy = [...prev]
         const last = copy[copy.length - 1]
-        copy[copy.length - 1] = { ...last, firstTokenMs, totalMs }
+        copy[copy.length - 1] = {
+          ...last,
+          content,
+          reasoning,
+          firstTokenMs,
+          totalMs,
+        }
         return copy
       })
     } catch (err) {
@@ -203,7 +221,7 @@ export function ChatTab({
         setMessages((prev) => {
           const copy = [...prev]
           const last = copy[copy.length - 1]
-          if (last?.role === 'assistant' && !last.content) {
+          if (last?.role === 'assistant' && !last.content && !last.reasoning) {
             copy[copy.length - 1] = {
               ...last,
               content: `[错误] ${message}`,
@@ -363,18 +381,27 @@ export function ChatTab({
             {messages.map((msg, i) => {
               const isStreamingTail =
                 streaming && i === messages.length - 1 && msg.role === 'assistant'
-              const emptyStreaming = isStreamingTail && !msg.content
+              const hasReasoning = Boolean(msg.reasoning)
+              const hasContent = Boolean(msg.content)
+              const emptyStreaming =
+                isStreamingTail && !hasContent && !hasReasoning
               const stats =
                 msg.role === 'assistant' &&
                 (msg.firstTokenMs !== undefined || msg.totalMs !== undefined) ? (
                   <>
                     {msg.firstTokenMs !== undefined && (
-                      <Badge variant="secondary" className="text-xs tabular-nums">
+                      <Badge
+                        variant="secondary"
+                        className="text-xs tabular-nums"
+                      >
                         {`首字 ${msg.firstTokenMs} ms`}
                       </Badge>
                     )}
                     {msg.totalMs !== undefined && (
-                      <Badge variant="secondary" className="text-xs tabular-nums">
+                      <Badge
+                        variant="secondary"
+                        className="text-xs tabular-nums"
+                      >
                         {`总耗时 ${msg.totalMs} ms`}
                       </Badge>
                     )}
@@ -385,7 +412,7 @@ export function ChatTab({
                 <div
                   key={i}
                   className={cn(
-                    'flex max-w-[80%] flex-col',
+                    'flex max-w-[80%] flex-col gap-1.5',
                     msg.role === 'user' ? 'self-end' : 'self-start',
                   )}
                 >
@@ -393,15 +420,35 @@ export function ChatTab({
                     <div className="rounded-lg bg-muted px-3 py-2">
                       <Spinner className="size-4" />
                     </div>
-                  ) : msg.content ? (
-                    <MarkdownContent
-                      content={msg.content}
-                      variant={msg.role === 'user' ? 'user' : 'assistant'}
-                      /* 流式输出中不提供切换，避免状态跳动 */
-                      toggleable={!isStreamingTail}
-                      footer={stats}
-                    />
-                  ) : null}
+                  ) : (
+                    <>
+                      {msg.role === 'assistant' &&
+                        (hasReasoning ||
+                          (isStreamingTail && !hasContent)) && (
+                          <ReasoningBlock
+                            content={msg.reasoning ?? ''}
+                            /* 整段流式期间保持展开，结束后组件内自动收起 */
+                            streaming={isStreamingTail}
+                          />
+                        )}
+                      {hasContent ? (
+                        <MarkdownContent
+                          content={msg.content}
+                          variant={
+                            msg.role === 'user' ? 'user' : 'assistant'
+                          }
+                          /* 流式输出中不提供切换，避免状态跳动 */
+                          toggleable={!isStreamingTail}
+                          footer={stats}
+                        />
+                      ) : (
+                        // 只有 CoT 还没有正文时，把耗时挂在思考块下方
+                        stats && (
+                          <div className="flex flex-wrap gap-1.5">{stats}</div>
+                        )
+                      )}
+                    </>
+                  )}
                 </div>
               )
             })}
